@@ -1,0 +1,175 @@
+---
+title: "Classe Prediction"
+output: html_document
+---
+# Summary
+
+The intent of this report is to classify exercises data from various sensors attached to subjects bodies. I choose to seperate the data into an 80/20 (training/testing) cross-validation set, since the data is relatively large enough. The final method to train the training data was the default method"rf", with an out of sample validation accuracy of as high as 0.9946. Before this I tried "rpart" method, but the accuracy is only around 0.4991.  The in-sample OOB estimate error rate of the "rf" train model was also only 0.55%, which was very good.  The final submission of testing data result were all accepted by coursera auto grading.  
+
+# Library and raw data loading
+
+```{r, echo=TRUE}
+library(caret)
+library(kernlab)
+library(randomForest)
+rawTrain <- read.csv("pml-training.csv")
+rawVali <- read.csv("pml-testing.csv")
+```
+
+# Data cleaning
+
+After reviewing the raw data excel, I notice there are many variables with values of NA or empty, and some obviously not relavant to analysis, such as timestamp, and choose what's left for analysis. 
+
+```{r, echo=TRUE, eval=FALSE}
+summary(rawTrain)
+Columns <- c(2,8,9,10,11,37,38,39,40,41,42,43,44,45,46,47,48,49,60,61,62,63,64,65,66,67,68,84,85,86,102,113,114,115,116,117,118,119,120,121,122,123,124,140,151,152,153,154,155,156,157,158,159,160)
+Train <- rawTrain[,Columns]
+Validate<- rawVali[,Columns]
+inTrain <- createDataPartition(y=Train$classe, p=0.8, list=FALSE)
+training <- Train[inTrain,]
+testing <- Train[-inTrain,]
+```
+
+# Model selecting and evaluation
+
+```{r, echo=TRUE, eval=FALSE}
+fit1<-train(classe~., data=training, method="rpart")
+fit2<-train(classe~., data=training)
+fit1$finalModel
+fit2$finalModel
+prediction1 <- predict(fit1, newdata=testing)
+prediction2 <- predict(fit2, newdata=testing)
+confusionMatrix(prediction1, testing$classe)
+confusionMatrix(prediction2, testing$classe)
+valiPredict <- predict(fit2, newdata=Validate)
+answers <- data.frame(lapply(valiPredict, as.character), stringsAsFactors=FALSE)
+```
+ 
+# Submission evaluation
+
+I tested the 20 classe according to the instruction and being accepted for submission.
+
+```{r, echo=TRUE, eval=FALSE}
+pml_write_files = function(x){
+        n = length(x)
+        for(i in 1:n){
+                filename = paste0("problem_id_",i,".txt")
+                write.table(x[i],file=filename,quote=FALSE,row.names=FALSE,col.names=FALSE)
+        }
+}
+
+pml_write_files(answers)
+```
+
+# Model result
+Due to the effencicy of my laptop, it takes around 3 hours to rerun it, so I simply attached the results below, and used eval=FALSE while I run it with knit HTML.
+
+## Model 1 
+
+```{r, echo=TRUE, eval=FALSE}
+Confusion Matrix and Statistics
+
+          Reference
+Prediction    A    B    C    D    E
+         A 1017  307  305  286  109
+         B   17  261   19  125   86
+         C   79  191  360  232  206
+         D    0    0    0    0    0
+         E    3    0    0    0  320
+
+Overall Statistics
+                                          
+               Accuracy : 0.4991          
+                 95% CI : (0.4833, 0.5149)
+    No Information Rate : 0.2845          
+    P-Value [Acc > NIR] : < 2.2e-16       
+                                          
+                  Kappa : 0.3457          
+ Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C
+Sensitivity            0.9113  0.34387  0.52632
+Specificity            0.6413  0.92193  0.78141
+Pos Pred Value         0.5025  0.51378  0.33708
+Neg Pred Value         0.9479  0.85417  0.88651
+Prevalence             0.2845  0.19347  0.17436
+Detection Rate         0.2592  0.06653  0.09177
+Detection Prevalence   0.5159  0.12949  0.27224
+Balanced Accuracy      0.7763  0.63290  0.65386
+                     Class: D Class: E
+Sensitivity            0.0000  0.44383
+Specificity            1.0000  0.99906
+Pos Pred Value            NaN  0.99071
+Neg Pred Value         0.8361  0.88861
+Prevalence             0.1639  0.18379
+Detection Rate         0.0000  0.08157
+Detection Prevalence   0.0000  0.08233
+Balanced Accuracy      0.5000  0.72145 
+
+```
+
+## Model 2
+```{r, echo=TRUE, eval=FALSE}
+Call:
+        randomForest(x = x, y = y, mtry = param$mtry) 
+Type of random forest: classification
+Number of trees: 500
+No. of variables tried at each split: 29
+
+OOB estimate of  error rate: 0.55%
+Confusion matrix:
+        A    B    C    D    E class.error
+A 4457    5    1    0    1 0.001568100
+B   18 3015    4    1    0 0.007570770
+C    0   11 2717   10    0 0.007669832
+D    0    0   25 2547    1 0.010104936
+E    0    1    4    4 2877 0.003118503
+
+
+Confusion Matrix and Statistics
+
+Reference
+Prediction    A    B    C    D    E
+A 1115    2    0    0    0
+B    1  754    2    0    0
+C    0    3  678    3    0
+D    0    0    4  634    0
+E    0    0    0    6  721
+
+Overall Statistics
+
+Accuracy : 0.9946          
+95% CI : (0.9918, 0.9967)
+No Information Rate : 0.2845          
+P-Value [Acc > NIR] : < 2.2e-16       
+
+Kappa : 0.9932          
+Mcnemar's Test P-Value : NA              
+
+Statistics by Class:
+
+                     Class: A Class: B Class: C
+Sensitivity            0.9991   0.9934   0.9912
+Specificity            0.9993   0.9991   0.9981
+Pos Pred Value         0.9982   0.9960   0.9912
+Neg Pred Value         0.9996   0.9984   0.9981
+Prevalence             0.2845   0.1935   0.1744
+Detection Rate         0.2842   0.1922   0.1728
+Detection Prevalence   0.2847   0.1930   0.1744
+Balanced Accuracy      0.9992   0.9962   0.9947
+                     Class: D Class: E
+Sensitivity            0.9860   1.0000
+Specificity            0.9988   0.9981
+Pos Pred Value         0.9937   0.9917
+Neg Pred Value         0.9973   1.0000
+Prevalence             0.1639   0.1838
+Detection Rate         0.1616   0.1838
+Detection Prevalence   0.1626   0.1853
+Balanced Accuracy      0.9924   0.9991
+```
+
+# Reference
+1. http://groupware.les.inf.puc-rio.br/har
+2. coursera disccusion forum
